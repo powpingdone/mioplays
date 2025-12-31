@@ -26,6 +26,12 @@
             inherit system;
             overlays = [fenix.overlays.default];
           };
+          libPath = with pkgs;
+            lib.makeLibraryPath [
+              libGL
+              libxkbcommon
+              wayland
+            ];
         in {
           default = pkgs.mkShell rec {
             packages =
@@ -37,11 +43,13 @@
                 cargo-expand
                 slint-lsp
                 slint-viewer
+                wayland-protocols
+                wayland
               ]);
             buildInputs = packages;
+            LD_LIBRARY_PATH = libPath;
           };
         }
       );
   };
 }
-
