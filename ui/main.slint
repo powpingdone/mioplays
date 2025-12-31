@@ -1,18 +1,42 @@
-export global MainBrowsingState { }
+import { PlayingState, MainBrowsingState, AlbumItem } from "global.slint";
+
+component MainBrowsingItem inherits Rectangle {
+    in-out property <AlbumItem> album;
+    height: self.width;
+
+    TouchArea {
+        VerticalLayout {
+            Image {
+                image-fit: ImageFit.fill;
+                height: self.width;
+                source: album.album-art;
+            }
+
+            Text {
+                text: album.title;
+            }
+
+            Text {
+                text: album.artist;
+            }
+
+            Text {
+                text: album.album;
+            }
+        }
+
+        clicked => {
+            PlayingState.enter(album.id)
+        }
+    }
+}
 
 component MainBrowsing inherits Rectangle {
     background: white;
-}
 
-export global PlayerTabState {
-    in property <image> album-art;
-}
-
-export global PlayingState {
-    in property <bool> is-playing: false;
-    callback play();
-    callback pause();
-    callback next();
+    GridLayout {
+        for album in MainBrowsingState.tracks: MainBrowsingItem { }
+    }
 }
 
 // circle used to enclose buttons
@@ -43,8 +67,6 @@ component PathCircle inherits Path {
     }
 
     Close { }
-
-    @children
 }
 
 // path based pause symbol, looks like ||
@@ -222,13 +244,15 @@ component PlayerTab inherits Rectangle {
     vertical-stretch: 0.2;
 
     HorizontalLayout {
+        // Album art
         Image {
             image-fit: ImageFit.fill;
-            source: PlayerTabState.album-art;
+            source: PlayingState.album-art;
         }
 
         PlayerControls { }
 
+        // This could be like the volume/share space
         Rectangle {
             Text {
                 text: "Placeholder.";

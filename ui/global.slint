@@ -1,0 +1,25 @@
+export struct AlbumItem {
+    title: string,
+    artist: string,
+    album: string,
+    album-art: image,
+    id: int, 
+}
+
+export global MainBrowsingState {
+    // the list of albums/tracks in the folder
+    in property <[AlbumItem]> tracks;
+}
+
+export global PlayerTabState {
+    // likely that volume/share thingy
+}
+
+export global PlayingState {
+    in property <image> album-art;
+    in property <bool> is-playing: false;
+    callback enter(int);
+    callback play();
+    callback pause();
+    callback next();
+}
