@@ -19,8 +19,11 @@ export component RadioButton {
     accessible-enabled: root.enabled;
     accessible-checkable: true;
     accessible-checked <=> root.checked;
+    //accessible-role: radio-button;
     accessible-role: checkbox;
-    accessible-action-default => { state_area.clicked(); }
+    accessible-action-default => {
+        state_area.clicked();
+    }
     forward_focus: state_area;
 
     state_area := StateLayerArea {
@@ -61,16 +64,16 @@ export component RadioButton {
     }
 
     states [
-        disabled when !root.enabled : {
+        disabled when !root.enabled: {
             border.border_color: MaterialPalette.on_surface;
             border.opacity: MaterialPalette.disable_opacity;
             indicator.background: MaterialPalette.on_surface;
             indicator.opacity: root.checked ? MaterialPalette.disable_opacity : 0;
         }
-        highlighted when !root.checked && (state_area.pressed || state_area.has_focus || state_area.has_hover) : {
+        highlighted when !root.checked && (state_area.pressed || state_area.has_focus || state_area.has_hover): {
             border.border_color: MaterialPalette.on_surface;
         }
-        checked when root.checked : {
+        checked when root.checked: {
             border.border_color: MaterialPalette.primary;
         }
     ]

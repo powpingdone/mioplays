@@ -6,7 +6,7 @@
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    nixpkgs.url = "github:nixos/nixpkgs?ref=nixpkgs-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
   };
 
   outputs = {
@@ -45,10 +45,11 @@
                 slint-viewer
                 wayland-protocols
                 wayland
-                noto-fonts
+                fontconfig
               ]);
             buildInputs = packages;
             LD_LIBRARY_PATH = libPath;
+            FONTCONFIG_FILE = pkgs.makeFontsConf {fontDirectories = [pkgs.noto-fonts.all];};
           };
         }
       );

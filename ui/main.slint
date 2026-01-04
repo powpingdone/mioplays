@@ -1,169 +1,33 @@
 import { PlayingState, MainBrowsingState, AlbumItem } from "global.slint";
-import { MaterialWindow } from "@material";
-
-
-// circle used to enclose buttons
-component PathCircle inherits Path {
-    stroke: blue;
-    stroke-width: 5px;
-    private property <int> w-mid: self.width / 2px;
-    private property <int> w-hei: self.height / 2px;
-    private property <int> midpoint: w-mid < w-hei ? w-mid : w-hei;
-
-    MoveTo {
-        x: midpoint;
-        y: 0;
-    }
-
-    ArcTo {
-        x: midpoint;
-        y: parent.height / 1px;
-        radius-x: midpoint;
-        radius-y: midpoint;
-    }
-
-    ArcTo {
-        x: midpoint;
-        y: 0;
-        radius-x: midpoint;
-        radius-y: midpoint;
-    }
-
-    Close { }
-}
-
-// path based pause symbol, looks like ||
-component PathPauseSymbol inherits Path {
-    fill: brown;
-    stroke: brown;
-    stroke-width: 5px;
-    private property <int> w-mid: self.width / 2px;
-    private property <int> w-hei: self.height / 2px;
-    private property <int> midpoint: w-mid < w-hei ? w-mid : w-hei;
-
-    // bounds for the pause icon
-    pure callback x-start() -> float;
-    pure callback x-end() -> float;
-    pure callback y-start() -> float;
-    pure callback y-end() -> float;
-
-    x-start => {
-        midpoint * 42%
-    }
-
-    x-end => {
-        midpoint * 58%
-    }
-
-    y-start => {
-        midpoint * 30%
-    }
-
-    y-end => {
-        midpoint * 70%
-    }
-
-    MoveTo {
-        x: x-start();
-        y: y-start();
-    }
-
-    LineTo {
-        x: x-start();
-        y: y-end();
-    }
-
-    Close { }
-
-    MoveTo {
-        x: x-end();
-        y: y-start();
-    }
-
-    LineTo {
-        x: x-end();
-        y: y-end();
-    }
-
-    Close { }
-}
-
-// path based play symbol, looks like >
-component PathPlaySymbol inherits Path {
-    fill: brown;
-    stroke: brown;
-    stroke-width: 5px;
-    private property <int> w-mid: self.width / 2px;
-    private property <int> w-hei: self.height / 2px;
-    private property <int> midpoint: w-mid < w-hei ? w-mid : w-hei;
-
-    MoveTo {
-        x: midpoint * 50%;
-        y: midpoint * 50%;
-    }
-
-    LineTo {
-        x: midpoint * 150%;
-        y: midpoint;
-    }
-
-    LineTo {
-        x: midpoint * 50%;
-        y: midpoint * 150%;
-    }
-
-    Close { }
-}
-
-// path based "next song" symbol, like >>
-component PathNextSymbol inherits Path {
-    fill: brown;
-    stroke: brown;
-    stroke-width: 5px;
-    private property <int> w-mid: self.width / 2px;
-    private property <int> w-hei: self.height / 2px;
-    private property <int> midpoint: w-mid < w-hei ? w-mid : w-hei;
-
-    MoveTo {
-        x: midpoint * 50%;
-        y: midpoint * 50%;
-    }
-
-    LineTo {
-        x: midpoint;
-        y: midpoint;
-    }
-
-    LineTo {
-        x: midpoint * 50%;
-        y: midpoint * 150%;
-    }
-
-    Close { }
-
-    MoveTo {
-        x: midpoint * 90%;
-        y: midpoint * 50%;
-    }
-
-    LineTo {
-        x: midpoint * 140%;
-        y: midpoint;
-    }
-
-    LineTo {
-        x: midpoint * 90%;
-        y: midpoint * 150%;
-    }
-
-    Close { }
-}
+import {
+    MaterialWindow,
+    AppBar,
+    ElevatedCard,
+    FilledButton,
+} from "material/material.slint";
 
 export component MainWindow inherits MaterialWindow {
-    default-font-family: "Noto Sans";
+    default-font-family: "DejaVu Sans";
     preferred-height: 640px;
     preferred-width: 480px;
     title: "Mioplays";
+
+    property <int> count: 0;
+    Text {
+        text: "hello!";
+    }
+
+    ElevatedCard {
+        width: 90%;
+        height: 90%;
+        FilledButton {
+            text: "Count: " + count;
+            icon: @image-url("../../img.jpg");
+            clicked => {
+                count += 1;
+            }
+        }
+    }
 }
 
 export { MainBrowsingState, PlayingState, AlbumItem }
