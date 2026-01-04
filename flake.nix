@@ -45,6 +45,7 @@
                 slint-viewer
                 wayland-protocols
                 wayland
+                noto-fonts
               ]);
             buildInputs = packages;
             LD_LIBRARY_PATH = libPath;

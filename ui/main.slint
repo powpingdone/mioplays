@@ -1,51 +1,6 @@
 import { PlayingState, MainBrowsingState, AlbumItem } from "global.slint";
-import { ListView } from "std-widgets.slint";
+import { MaterialWindow } from "@material";
 
-component MainBrowsingItem inherits Rectangle {
-    in-out property <AlbumItem> album;
-    width <=> self.height;
-
-    TouchArea {
-        HorizontalLayout {
-            spacing: 4px;
-            Image {
-                height: 60%;
-                image-fit: ImageFit.fill;
-                source: album.album-art;
-            }
-
-            Text {
-                color: black;
-                text: album.title;
-            }
-
-            Text {
-                color: black;
-                text: album.artist;
-            }
-
-            Text {
-                color: black;
-                text: album.album;
-            }
-        }
-
-        clicked => {
-            PlayingState.enter(album.id)
-        }
-    }
-}
-
-component MainBrowsing inherits Rectangle {
-    background: white;
-
-    ListView {
-        for album in MainBrowsingState.tracks: MainBrowsingItem {
-            height: 100px;
-            album: album;
-        }
-    }
-}
 
 // circle used to enclose buttons
 component PathCircle inherits Path {
@@ -204,88 +159,11 @@ component PathNextSymbol inherits Path {
     Close { }
 }
 
-component PlayerControls inherits Rectangle {
-    background: red;
-
-    VerticalLayout {
-        HorizontalLayout {
-            padding: 8px;
-            // Play/Pause button
-            TouchArea {
-                PathCircle { }
-
-                PathPauseSymbol {
-                    visible: !PlayingState.is-playing;
-                    height: parent.height * 60%;
-                }
-
-                PathPlaySymbol {
-                    visible: PlayingState.is-playing;
-                    height: parent.height * 60%;
-                }
-
-                // TODO: accessibilty here
-                clicked => {
-                    PlayingState.is-playing ? PlayingState.pause() : PlayingState.play();
-                }
-            }
-
-            TouchArea {
-                height: 95%;
-                PathCircle { }
-
-                PathNextSymbol {
-                    height: parent.height * 60%;
-                }
-
-                clicked => {
-                    PlayingState.next()
-                }
-                // TODO: accessibility roles here
-            }
-        }
-    }
-}
-
-component PlayerTab inherits Rectangle {
-    background: gray;
-    vertical-stretch: 0.2;
-
-    HorizontalLayout {
-        // Album art
-        Image {
-            image-fit: ImageFit.fill;
-            source: PlayingState.album-art;
-        }
-
-        PlayerControls { }
-
-        // This could be like the volume/share space
-        Rectangle {
-            Text {
-                text: "Placeholder.";
-            }
-        }
-    }
-}
-
-export component MainWindow inherits Window {
+export component MainWindow inherits MaterialWindow {
+    default-font-family: "Noto Sans";
     preferred-height: 640px;
     preferred-width: 480px;
-    GridLayout {
-        Row {
-            MainBrowsing {
-                width: 100%;
-            }
-        }
-
-        Row {
-            PlayerTab {
-                width: 100%;
-                max-height: 75px;
-            }
-        }
-    }
+    title: "Mioplays";
 }
 
 export { MainBrowsingState, PlayingState, AlbumItem }

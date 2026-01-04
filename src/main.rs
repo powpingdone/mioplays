@@ -10,7 +10,7 @@ fn main() {
         artist: "Artist Ipsum".into(),
         id: 0,
         title: "Title Lorem".into(),
-        album_art: slint::Image::load_from_path(&PathBuf::from("img.jpg")).unwrap(),
+        album_art: slint::Image::load_from_path(&PathBuf::from("../img.jpg")).unwrap(),
     }]));
     browse_state.set_tracks(slint::ModelRc::from(e));
     drop(browse_state);
