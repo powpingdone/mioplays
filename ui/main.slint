@@ -1,31 +1,34 @@
 import { PlayingState, MainBrowsingState, AlbumItem } from "global.slint";
 import {
     MaterialWindow,
-    AppBar,
-    ElevatedCard,
-    FilledButton,
+    SmallAppBar,
+    NavigationBar,
+    ModalNavigationDrawer,
 } from "material/material.slint";
+import { Palette } from "std-widgets.slint";
+
+global NavBind {
+    in-out property <int> nav-group;
+    in-out property <int> nav-index;
+}
 
 export component MainWindow inherits MaterialWindow {
     default-font-family: "DejaVu Sans";
     preferred-height: 640px;
     preferred-width: 480px;
     title: "Mioplays";
+    background: Palette.background;
 
-    property <int> count: 0;
-    Text {
-        text: "hello!";
-    }
+    VerticalLayout {
+        appbar := SmallAppBar {
+            title: "Mioplays";
+        }
 
-    ElevatedCard {
-        width: 90%;
-        height: 90%;
-        FilledButton {
-            text: "Count: " + count;
-            icon: @image-url("../../img.jpg");
-            clicked => {
-                count += 1;
-            }
+        nav-drawer := ModalNavigationDrawer {
+            current-group <=> NavBind.nav-group;
+            current-index <=> NavBind.nav-index;
+            width: root.width;
+            height: root.height;
         }
     }
 }
