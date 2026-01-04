@@ -3,12 +3,13 @@ export struct AlbumItem {
     artist: string,
     album: string,
     album-art: image,
-    id: int, 
+    id: int,
 }
 
 export global MainBrowsingState {
     // the list of albums/tracks in the folder
-    in property <[AlbumItem]> tracks;
+    in property <[[AlbumItem]]> tracks;
+    callback album-view-width-changed(max-per-row: int);
 }
 
 export global PlayerTabState {
