@@ -4,6 +4,7 @@ import {
     SmallAppBar,
     NavigationBar,
     ModalNavigationDrawer,
+    Vertical,
 } from "material/material.slint";
 import { Palette } from "std-widgets.slint";
 
@@ -18,10 +19,13 @@ export component MainWindow inherits MaterialWindow {
     preferred-width: 480px;
     title: "Mioplays";
     background: Palette.background;
-
-    VerticalLayout {
+    Vertical {
         appbar := SmallAppBar {
             title: "Mioplays";
+            leading-button: { icon:@image-url("../../img.jpg"), tooltip:"Menu", enabled:true };
+            leading-button-clicked => {
+                nav-drawer.show()
+            }
         }
 
         nav-drawer := ModalNavigationDrawer {
@@ -29,6 +33,10 @@ export component MainWindow inherits MaterialWindow {
             current-index <=> NavBind.nav-index;
             width: root.width;
             height: root.height;
+            x: 0;
+            y: 0;
+
+            groups: [{ title: "Main", items: [{ text: "Albums" }, { text:"Search" }] }];
         }
     }
 }
