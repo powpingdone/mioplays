@@ -4,6 +4,7 @@ version = "0.0.0"
 edition = "2024"
 
 [dependencies]
+async-lazy = "0.1.2"
 slint = {version = "1.14", features=["renderer-skia", "accessibility"]}
 smol = "2.0"
 

@@ -1,5 +1,5 @@
 use smol::prelude::*;
-use std::{collections::HashMap, path::PathBuf, sync::LazyLock};
+use std::{collections::HashMap, ffi::OsStr, path::PathBuf, sync::LazyLock};
 
 slint::include_modules!();
 
@@ -16,7 +16,7 @@ enum ItemType {
     // an audio file that doesn't contain tags
     AudioFile,
     // a audio file with tags
-    TaggedFile(HashMap<String, Box<[u8]>>),
+    TaggedFile(async_lazy::Lazy<HashMap<String, Box<[u8]>>>),
 }
 
 #[derive(Default)]
@@ -43,7 +43,26 @@ impl Tracks {
                     let ftype = item.file_type().await.unwrap();
                     if ftype.is_file() {
                         // file logic
-                        todo!()
+                        ret.push(Item {
+                            path: item.path().clone(),
+                            item_type: {
+                                match item.path().extension() {
+                                    Some(ext) => {
+                                        if check_extension_for_tag_decoder(ext) {
+                                            ItemType::TaggedFile(async_lazy::Lazy::new(|| {
+                                                Box::pin({
+                                                    let path = item.path().clone();
+                                                    async move { todo!() }
+                                                })
+                                            }))
+                                        } else if check_extension_for_sound_decoder(ext) {
+                                            ItemType::AudioFile
+                                        }
+                                    }
+                                    None => ItemType::File,
+                                }
+                            },
+                        });
                     } else if ftype.is_dir() {
                         // traverse dir
                         ret.extend(Box::pin(scan_recurse(item.path(), 10)).await);
@@ -61,6 +80,10 @@ impl Tracks {
         self.0.extend(scan_recurse(input_dir.clone(), 10).await);
     }
 }
+
+async fn check_extension_for_tag_decoder(inp: &OsStr) -> bool {}
+
+async fn check_extension_for_sound_decoder(inp: &OsStr) -> bool {}
 
 fn load_music_files() {}
 
