@@ -1,38 +1,53 @@
+use slint::Weak as SlintWeak;
 use smol::prelude::*;
-use std::{collections::HashMap, ffi::OsStr, path::PathBuf, sync::LazyLock};
+use std::{
+    collections::HashMap,
+    ffi::OsStr,
+    path::PathBuf,
+    sync::{Arc, LazyLock, Weak as ArcWeak},
+};
 
 slint::include_modules!();
 
 static DEFAULT_MUSIC: LazyLock<PathBuf> = LazyLock::new(|| PathBuf::from("~/Music"));
+static ASYNC_RT: smol::Executor<'static> = smol::Executor::new();
 
 struct Item {
-    path: PathBuf,
-    item_type: ItemType,
+    pub path: PathBuf,
+    pub item_type: ItemType,
 }
 
+type TagMap = HashMap<String, Box<[u8]>>;
 enum ItemType {
     // some ordinary file
     File,
     // an audio file that doesn't contain tags
     AudioFile,
     // a audio file with tags
-    TaggedFile(async_lazy::Lazy<HashMap<String, Box<[u8]>>>),
+    TaggedFile(TagMap),
 }
 
 #[derive(Default)]
 struct Tracks(Vec<Item>);
 
-struct MioPlaysState<'a> {
-    rt: smol::Executor<'a>,
-    tracks: Tracks,
+#[derive(Default)]
+struct MioPlaysState {
+    pub tracks: Tracks,
 }
 
-impl Tracks {
+impl MioPlaysState {
     fn new() -> Self {
         Self::default()
     }
+}
 
-    async fn rescan(&mut self) {
+impl Tracks {
+    fn clone_to_multi_vec(&self, items_per: usize) -> Vec<Vec<AlbumItem>> {
+        todo!()
+    }
+
+    async fn scan(&mut self) {
+        // TODO: error handling
         async fn scan_recurse(at: PathBuf, limit: u8) -> Vec<Item> {
             if limit > 0 {
                 // normal scan logic
@@ -48,15 +63,12 @@ impl Tracks {
                             item_type: {
                                 match item.path().extension() {
                                     Some(ext) => {
-                                        if check_extension_for_tag_decoder(ext) {
-                                            ItemType::TaggedFile(async_lazy::Lazy::new(|| {
-                                                Box::pin({
-                                                    let path = item.path().clone();
-                                                    async move { todo!() }
-                                                })
-                                            }))
-                                        } else if check_extension_for_sound_decoder(ext) {
+                                        if check_extension_for_tag_decoder(ext).await {
+                                            ItemType::TaggedFile(decode_tags(item.path()).await)
+                                        } else if check_extension_for_sound_decoder(ext).await {
                                             ItemType::AudioFile
+                                        } else {
+                                            ItemType::File
                                         }
                                     }
                                     None => ItemType::File,
@@ -81,23 +93,95 @@ impl Tracks {
     }
 }
 
-async fn check_extension_for_tag_decoder(inp: &OsStr) -> bool {}
+async fn check_extension_for_tag_decoder(inp: &OsStr) -> bool {
+    // TODO: impl
+    true
+}
 
-async fn check_extension_for_sound_decoder(inp: &OsStr) -> bool {}
+async fn check_extension_for_sound_decoder(inp: &OsStr) -> bool {
+    // TODO: impl
+    true
+}
 
-fn load_music_files() {}
+async fn decode_tags(inp: PathBuf) -> TagMap {
+    // TODO: impl
+    TagMap::default()
+}
 
-fn main() {
-    let mainui = MainWindow::new().unwrap();
-    let browse_state = mainui.global::<MainBrowsingState>();
-    let e = slint::ModelRc::new(slint::VecModel::from(
-        Vec::<Vec<_>>::new()
+fn reload_music_files(
+    w_state: ArcWeak<smol::lock::RwLock<MioPlaysState>>,
+    w_mainui: SlintWeak<MainWindow>,
+) {
+    let Some(state_lock) = w_state.upgrade() else {
+        return;
+    };
+    ASYNC_RT
+        .spawn(async move {
+            let mut state = state_lock.write().await;
+            state.tracks.scan().await;
+            drop(state);
+
+            w_mainui
+                .upgrade_in_event_loop(|mainui| {
+                    mainui
+                        .global::<MainBrowsingState>()
+                        .invoke_album_view_width_changed();
+                })
+                .unwrap();
+        })
+        .detach();
+}
+
+// if the UI locks up on this function, shove it to another thread
+fn width_changed(
+    w_state: ArcWeak<smol::lock::RwLock<MioPlaysState>>,
+    w_mainui: SlintWeak<MainWindow>,
+) {
+    let Some(state_lock) = w_state.upgrade() else {
+        return;
+    };
+    let Some(mainui) = w_mainui.upgrade() else {
+        return;
+    };
+    let state = state_lock.read_blocking();
+    let main_browsing_state = mainui.global::<MainBrowsingState>();
+    let multi_vec = state
+        .tracks
+        .clone_to_multi_vec(main_browsing_state.get_max_per_row() as usize);
+
+    main_browsing_state.set_tracks(slint::ModelRc::new(slint::VecModel::from(
+        multi_vec
             .into_iter()
             .map(|inner| slint::ModelRc::new(slint::VecModel::from(inner)))
             .collect::<Vec<_>>(),
-    ));
+    )));
+}
 
-    browse_state.set_tracks(e);
+fn main() {
+    let state = Arc::new(smol::lock::RwLock::new(MioPlaysState::new()));
+    let mainui = MainWindow::new().unwrap();
+    let browse_state = mainui.global::<MainBrowsingState>();
+
+    browse_state.on_begin_reload_all_tracks({
+        let w_state = Arc::downgrade(&state);
+        let w_mainui = mainui.as_weak();
+        move || reload_music_files(w_state.clone(), w_mainui.clone())
+    });
+
+    browse_state.on_album_view_width_changed({
+        let w_state = Arc::downgrade(&state);
+        let w_mainui = mainui.as_weak();
+        move || width_changed(w_state.clone(), w_mainui.clone())
+    });
+
     drop(browse_state);
+
+    let rt_thread = slint::spawn_local(async {
+        loop {
+            ASYNC_RT.tick().await;
+        }
+    })
+    .unwrap();
     mainui.run().unwrap();
+    rt_thread.abort();
 }

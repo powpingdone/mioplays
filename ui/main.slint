@@ -21,7 +21,8 @@ component AlbumView inherits ScrollView {
     private property <length> card-size: 192px;
     changed width => {
         // on width update, also update the internal representation
-        MainBrowsingState.album-view-width-changed(self.width / card-size)
+        MainBrowsingState.max-per-row = self.width / card-size;
+        MainBrowsingState.album-view-width-changed()
     }
 
     Vertical {

@@ -9,7 +9,9 @@ export struct AlbumItem {
 export global MainBrowsingState {
     // the list of albums/tracks in the folder
     in property <[[AlbumItem]]> tracks;
-    callback album-view-width-changed(max-per-row: int);
+    in property <int> max-per-row;
+    callback album-view-width-changed();
+    callback begin-reload-all-tracks();
 }
 
 export global PlayerTabState {
