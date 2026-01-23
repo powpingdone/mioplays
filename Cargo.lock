@@ -314,15 +314,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-lazy"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42b26d628201db54edfaa7e0f9848295b272610d97759a0ff61d6de7bb885b5f"
-dependencies = [
- "tokio",
-]
-
-[[package]]
 name = "async-lock"
 version = "3.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2763,7 +2754,6 @@ dependencies = [
 name = "mioplays"
 version = "0.0.0"
 dependencies = [
- "async-lazy",
  "slint",
  "slint-build",
  "smol",
@@ -4578,15 +4568,6 @@ name = "tinyvec_macros"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
-
-[[package]]
-name = "tokio"
-version = "1.49.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72a2903cd7736441aac9df9d7688bd0ce48edccaadf181c3b90be801e81d3d86"
-dependencies = [
- "pin-project-lite",
-]
 
 [[package]]
 name = "toml"

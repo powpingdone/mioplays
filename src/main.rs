@@ -1,6 +1,7 @@
-use slint::Weak as SlintWeak;
+use slint::{Model, Weak as SlintWeak};
 use smol::prelude::*;
 use std::{
+    arch::is_aarch64_feature_detected,
     collections::HashMap,
     ffi::OsStr,
     path::PathBuf,
@@ -9,22 +10,23 @@ use std::{
 
 slint::include_modules!();
 
+mod tag_set;
+
 static DEFAULT_MUSIC: LazyLock<PathBuf> = LazyLock::new(|| PathBuf::from("~/Music"));
 static ASYNC_RT: smol::Executor<'static> = smol::Executor::new();
 
-struct Item {
-    pub path: PathBuf,
-    pub item_type: ItemType,
-}
+#[derive(Clone)]
+struct AudioField;
 
 type TagMap = HashMap<String, Box<[u8]>>;
-enum ItemType {
-    // some ordinary file
-    File,
-    // an audio file that doesn't contain tags
-    AudioFile,
-    // a audio file with tags
-    TaggedFile(TagMap),
+#[derive(Clone)]
+struct TagField;
+
+#[derive(Clone)]
+struct Item {
+    pub path: PathBuf,
+    pub audio: Option<AudioField>,
+    pub tags: Option<TagField>,
 }
 
 #[derive(Default)]
@@ -43,7 +45,22 @@ impl MioPlaysState {
 
 impl Tracks {
     fn clone_to_multi_vec(&self, items_per: usize) -> Vec<Vec<AlbumItem>> {
-        todo!()
+        let mut ret = vec![];
+        let mut chunk = vec![];
+        for (e, _x) in self.0.iter().enumerate() {
+            let x = AlbumItem {
+                album: "ALBUM".into(),
+                artist: "ARTIST".into(),
+                id: e.try_into().unwrap(),
+                title: "TITLE".into(),
+                album_art: Default::default(),
+            };
+            chunk.push(x);
+            if chunk.len() >= items_per {
+                ret.push(std::mem::take(&mut chunk));
+            }
+        }
+        ret
     }
 
     async fn scan(&mut self) {
@@ -58,21 +75,23 @@ impl Tracks {
                     let ftype = item.file_type().await.unwrap();
                     if ftype.is_file() {
                         // file logic
+                        let path = item.path().clone();
+                        let ext = path.extension().and_then(|x| x.to_str());
                         ret.push(Item {
-                            path: item.path().clone(),
-                            item_type: {
-                                match item.path().extension() {
-                                    Some(ext) => {
-                                        if check_extension_for_tag_decoder(ext).await {
-                                            ItemType::TaggedFile(decode_tags(item.path()).await)
-                                        } else if check_extension_for_sound_decoder(ext).await {
-                                            ItemType::AudioFile
-                                        } else {
-                                            ItemType::File
-                                        }
-                                    }
-                                    None => ItemType::File,
-                                }
+                            path: path.clone(),
+                            audio: if let Some(ext) = &ext
+                                && check_extension_for_sound_decoder(ext).await
+                            {
+                                Some(AudioField)
+                            } else {
+                                None
+                            },
+                            tags: if let Some(ext) = &ext
+                                && check_extension_for_tag_decoder(ext).await
+                            {
+                                Some(TagField)
+                            } else {
+                                None
                             },
                         });
                     } else if ftype.is_dir() {
@@ -93,36 +112,40 @@ impl Tracks {
     }
 }
 
-async fn check_extension_for_tag_decoder(inp: &OsStr) -> bool {
+async fn check_extension_for_tag_decoder(inp: &str) -> bool {
     // TODO: impl
     true
 }
 
-async fn check_extension_for_sound_decoder(inp: &OsStr) -> bool {
+async fn check_extension_for_sound_decoder(inp: &str) -> bool {
     // TODO: impl
     true
 }
 
 async fn decode_tags(inp: PathBuf) -> TagMap {
     // TODO: impl
-    TagMap::default()
+    let mut ret = TagMap::default();
+    ret
 }
 
 fn reload_music_files(
     w_state: ArcWeak<smol::lock::RwLock<MioPlaysState>>,
     w_mainui: SlintWeak<MainWindow>,
 ) {
+    // spawn an async task
     let Some(state_lock) = w_state.upgrade() else {
         return;
     };
     ASYNC_RT
         .spawn(async move {
+            // reset track list
             let mut state = state_lock.write().await;
             state.tracks.scan().await;
             drop(state);
 
             w_mainui
                 .upgrade_in_event_loop(|mainui| {
+                    // then reload the grid
                     mainui
                         .global::<MainBrowsingState>()
                         .invoke_album_view_width_changed();
@@ -132,7 +155,7 @@ fn reload_music_files(
         .detach();
 }
 
-// if the UI locks up on this function, shove it to another thread
+// NOTE: the UI can stall on this function, shove it to another thread (if needed)
 fn width_changed(
     w_state: ArcWeak<smol::lock::RwLock<MioPlaysState>>,
     w_mainui: SlintWeak<MainWindow>,
@@ -143,12 +166,28 @@ fn width_changed(
     let Some(mainui) = w_mainui.upgrade() else {
         return;
     };
-    let state = state_lock.read_blocking();
     let main_browsing_state = mainui.global::<MainBrowsingState>();
+
+    // check if row_count is still the same as the requested max-per-row
+    let vec_tracks = main_browsing_state.get_tracks();
+    let Some(inner) = vec_tracks.iter().nth(0) else {
+        // fail on empty vec
+        return;
+    };
+    // there is a single case where this will always result in a refresh:
+    // where the total songs is less than the max-per-row.
+    // anyways, fast path.
+    if inner.row_count() == main_browsing_state.get_max_per_row() as usize {
+        return;
+    }
+
+    // construct the multidim vec
+    let state = state_lock.read_blocking();
     let multi_vec = state
         .tracks
         .clone_to_multi_vec(main_browsing_state.get_max_per_row() as usize);
 
+    // then set the track vec
     main_browsing_state.set_tracks(slint::ModelRc::new(slint::VecModel::from(
         multi_vec
             .into_iter()
