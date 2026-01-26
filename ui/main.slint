@@ -90,7 +90,7 @@ export component MainWindow inherits MaterialWindow {
     Vertical {
         appbar := SmallAppBar {
             title: "Mioplays";
-            leading-button: { icon:@image-url("../../img.jpg"), tooltip:"Menu", enabled:true };
+            leading-button: { tooltip:"Menu", enabled:true };
             leading-button-clicked => {
                 nav-drawer.show()
             }

@@ -1,25 +1,45 @@
-use std::collections::HashSet;
+use std::{
+    any::{Any, TypeId},
+    collections::HashMap,
+};
 
-pub enum Tag {
-    Title(String),
+pub trait TagInner {}
+
+pub trait Tag: TagInner + Any {}
+
+pub struct Title {
+    title: String,
 }
 
-#[repr(u64)]
-pub enum TagQuery {
-    Title,
-}
+impl TagInner for Title {}
 
-pub struct TagSet(Vec<Tag>);
+pub struct TagSet {
+    known: HashMap<TypeId, Box<dyn Any + 'static>>,
+}
 
 impl TagSet {
     pub fn new() -> Self {
-        Self(Vec::new())
+        Self {
+            known: HashMap::new(),
+        }
+    }
+
+    // Add tag to set. If the associated tag is already in the set,
+    // return the argument as an error.
+    pub fn push_typed_tag<K: Tag + 'static>(&mut self, tag: K) -> Result<(), K> {
+        if self.known.contains_key(&tag.type_id()) {
+            Err(tag)
+        } else {
+            let ret = self.known.insert(tag.type_id(), Box::new(tag));
+            if ret.is_some() {
+                panic!("somehow, we don't contain a key we have access to now")
+            }
+            Ok(())
+        }
+    }
+
+    pub fn get_typed_tag<K: Any>(&self) -> Option<&K> {
+        let type_id = TypeId::of::<K>();
+        self.known.get(&type_id)?.downcast_ref()
     }
 }
-
-// documentation on how this works
-// It's going to be a manual implementation of a hashset where TagQueries
-// map onto Tags. Something like TagQueries::Title -> Tag::Title(String).
-// This is going to require a mapping function for going back and forth between
-// each type, then hashing the TagQuery side to determine placement for the Tag.
-// This will likely be as simple as `TagQuery as u64`.
