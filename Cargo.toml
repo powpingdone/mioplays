@@ -4,6 +4,7 @@ version = "0.0.0"
 edition = "2024"
 
 [dependencies]
+image = "0.25.9"
 slint = {version = "1.14", features=["renderer-skia", "accessibility"]}
 smol = "2.0"
 

@@ -1,9 +1,6 @@
 use slint::{Model, Weak as SlintWeak};
 use smol::prelude::*;
 use std::{
-    arch::is_aarch64_feature_detected,
-    collections::HashMap,
-    ffi::OsStr,
     path::PathBuf,
     sync::{Arc, LazyLock, Weak as ArcWeak},
 };
@@ -15,18 +12,14 @@ mod tag_set;
 static DEFAULT_MUSIC: LazyLock<PathBuf> = LazyLock::new(|| PathBuf::from("~/Music"));
 static ASYNC_RT: smol::Executor<'static> = smol::Executor::new();
 
-#[derive(Clone)]
+#[derive(Debug)]
 struct AudioField;
 
-type TagMap = HashMap<String, Box<[u8]>>;
-#[derive(Clone)]
-struct TagField;
-
-#[derive(Clone)]
+#[derive(Debug)]
 struct Item {
     pub path: PathBuf,
     pub audio: Option<AudioField>,
-    pub tags: Option<TagField>,
+    pub tags: tag_set::TagSet,
 }
 
 #[derive(Default)]
@@ -89,9 +82,9 @@ impl Tracks {
                             tags: if let Some(ext) = &ext
                                 && check_extension_for_tag_decoder(ext).await
                             {
-                                Some(TagField)
+                                decode_tags(path).await
                             } else {
-                                None
+                                tag_set::TagSet::new()
                             },
                         });
                     } else if ftype.is_dir() {
@@ -122,9 +115,9 @@ async fn check_extension_for_sound_decoder(inp: &str) -> bool {
     true
 }
 
-async fn decode_tags(inp: PathBuf) -> TagMap {
+async fn decode_tags(inp: PathBuf) -> tag_set::TagSet {
     // TODO: impl
-    let mut ret = TagMap::default();
+    let mut ret = tag_set::TagSet::new();
     ret
 }
 

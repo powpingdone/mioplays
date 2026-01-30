@@ -2754,6 +2754,7 @@ dependencies = [
 name = "mioplays"
 version = "0.0.0"
 dependencies = [
+ "image",
  "slint",
  "slint-build",
  "smol",
