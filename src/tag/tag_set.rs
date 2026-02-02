@@ -12,9 +12,27 @@ mod private {
 pub trait Tag: private::Sealed + Any + Debug {
     fn to_any(&self) -> &(dyn Any + 'static);
     fn to_any_boxed(self: Box<Self>) -> Box<dyn Any + 'static>;
+    fn display_name(&self) -> Option<&str>;
 }
 macro_rules! tag_impl {
-    ($tag:ty) => {
+    ($tag:ident {$($name:ident : $typ:ty),+} => $display_name:expr) => {
+        #[derive(Debug)]
+        pub struct $tag {
+            $( $name: $typ, )+
+        }
+
+        tag_trait_impl!($tag: $display_name);
+    };
+    ($tag:ident as $inner:ty => $display_name:expr) => {
+        #[derive(Debug)]
+        pub struct $tag(pub $inner);
+
+        tag_trait_impl!($tag: $display_name);
+    };
+
+}
+macro_rules! tag_trait_impl {
+    ($tag:ident: $display_name:expr) => {
         impl private::Sealed for $tag {}
         impl Tag for $tag {
             fn to_any(&self) -> &(dyn Any + 'static) {
@@ -24,26 +42,152 @@ macro_rules! tag_impl {
             fn to_any_boxed(self: Box<Self>) -> Box<dyn Any + 'static> {
                 self
             }
-        }
-        impl Debug for $tag {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-                f.debug_tuple("$tag").field(&self.0).finish()
+
+            fn display_name(&self) -> Option<&str> {
+                Some($display_name)
             }
         }
     };
 }
 
-pub struct Title(pub String);
-tag_impl!(Title);
+// List of all tag structs being mapped to the appropriate item
 
-pub struct Artist(pub String);
-tag_impl!(Artist);
+// some notes before this arduous hell:
+//
+// * any tags that holds an artist name is expected to hold multiple artist names
+//
+// * any tags that involve sort order will insert it into the struct of the same name
+// (AlbumTitleSortOrder -> AlbumTitle {inner: String, sort_order: Option<String>})
 
-pub struct Album(pub String);
-tag_impl!(Album);
+// Titles/Subtitles
+tag_impl!(AlbumTitle {inner: String, sort_order: String} => "Album Title");
+tag_impl!(SetSubtitle as String => "Album Subtitle");
+tag_impl!(TrackTitle as String => "Track Title");
+tag_impl!(TrackSubtitle as String => "Track Subtitle");
+tag_impl!(OriginalAlbumTitle as String => "Original Album Title");
 
-pub struct EncodedCoverArt(pub Box<[u8]>);
-tag_impl!(EncodedCoverArt);
+// Artists
+tag_impl!(OriginalArtist as Vec<String> => "Original Artist");
+tag_impl!(OriginalLyricist as Vec<String> => "Original Lyricist");
+tag_impl!(AlbumArtist {inner: Vec<String>, sort_order: String} => "Album Artist");
+
+// Other
+tag_impl!(ShowName as String => "Show Name"); // The name of a TV show
+tag_impl!(ContentGroup as String => "Content Group");
+
+// Sort Order
+tag_impl!(TrackTitleSortOrder as String => "Track Title Sort Order");
+tag_impl!(TrackArtistSortOrder as String => "Track Artist Sort Order");
+tag_impl!(ShowNameSortOrder as String => "Show Name Sort Order");
+tag_impl!(ComposerSortOrder as String => "Composer Sort Order");
+
+//TrackArtist
+//TrackArtists
+//Arranger
+//Writer
+//Composer
+//Conductor
+//Director
+//Engineer
+//Lyricist
+//MixDj
+//MixEngineer
+//MusicianCredits
+//Performer
+//Producer
+//Publisher
+//Label
+//InternetRadioStationName
+//InternetRadioStationOwner
+//Remixer
+//DiscNumber
+//DiscTotal
+//TrackNumber
+//TrackTotal
+//Popularimeter
+//ParentalAdvisory
+//Isrc
+//Barcode
+//CatalogNumber
+//Work
+//Movement
+//MovementNumber
+//MovementTotal
+//OriginalFileName
+//OriginalMediaType
+//EncodedBy
+//EncoderSoftware
+//EncoderSettings
+//EncodingTime
+//ReplayGainAlbumGain
+//ReplayGainAlbumPeak
+//ReplayGainTrackGain
+//ReplayGainTrackPeak
+//AudioFileUrl
+//AudioSourceUrl
+//CommercialInformationUrl
+//CopyrightUrl
+//TrackArtistUrl
+//RadioStationUrl
+//PaymentUrl
+//PublisherUrl
+//Genre
+//InitialKey
+//Color
+//Mood
+//Bpm
+//IntegerBpm
+//CopyrightMessage
+//License
+//PodcastDescription
+//PodcastSeriesCategory
+//PodcastUrl
+//PodcastGlobalUniqueId
+//PodcastKeywords
+//Comment
+//Description
+//Language
+//Script
+//Lyrics
+//AppleXid
+//AppleId3v2ContentGroup
+
+// Musicbrainz Tags
+//RecordingDate
+//Year
+//ReleaseDate
+//OriginalReleaseDate
+//MusicBrainzRecordingId
+//MusicBrainzTrackId
+//MusicBrainzReleaseId
+//MusicBrainzReleaseGroupId
+//MusicBrainzArtistId
+//MusicBrainzReleaseArtistId
+//MusicBrainzWorkId
+//FlagCompilation
+//FlagPodcast
+//FileType
+//FileOwner
+//TaggingTime
+//Length
+
+// Special tag for the string insert
+#[derive(Debug)]
+pub struct UnknownItem(Box<dyn Any + Send + Sync + 'static>);
+impl private::Sealed for UnknownItem {}
+impl Tag for UnknownItem {
+    fn to_any(&self) -> &(dyn Any + 'static) {
+        self
+    }
+
+    fn to_any_boxed(self: Box<Self>) -> Box<dyn Any + 'static> {
+        self
+    }
+
+    fn display_name(&self) -> Option<&str> {
+        None
+    }
+}
 
 /// A private enum for containing both a custom `String` id and
 /// a `TypeId`. Used for allowing typed HashMap accesses along with
@@ -140,9 +284,10 @@ impl TagSet {
     pub fn push_custom_tag(
         &mut self,
         key: impl AsRef<str>,
-        value: Box<dyn Tag + Send + Sync + 'static>,
+        value: Box<dyn Any + Send + Sync + 'static>,
     ) -> Result<(), Box<dyn Tag + Send + Sync + 'static>> {
         let key = key.as_ref().into();
+        let value = Box::new(UnknownItem(value));
         if self.map.contains_key(&key) {
             Err(value)
         } else {

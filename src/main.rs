@@ -7,7 +7,7 @@ use std::{
 
 slint::include_modules!();
 
-mod tag_set;
+mod tag;
 
 static DEFAULT_MUSIC: LazyLock<PathBuf> = LazyLock::new(|| PathBuf::from("~/Music"));
 static ASYNC_RT: smol::Executor<'static> = smol::Executor::new();
@@ -19,7 +19,7 @@ struct AudioField;
 struct Item {
     pub path: PathBuf,
     pub audio: Option<AudioField>,
-    pub tags: tag_set::TagSet,
+    pub tags: Option<tag::TagSet>,
 }
 
 #[derive(Default)]
@@ -82,9 +82,9 @@ impl Tracks {
                             tags: if let Some(ext) = &ext
                                 && check_extension_for_tag_decoder(ext).await
                             {
-                                decode_tags(path).await
+                                Some(tag::decode_tags(path).await)
                             } else {
-                                tag_set::TagSet::new()
+                                None
                             },
                         });
                     } else if ftype.is_dir() {
@@ -113,12 +113,6 @@ async fn check_extension_for_tag_decoder(inp: &str) -> bool {
 async fn check_extension_for_sound_decoder(inp: &str) -> bool {
     // TODO: impl
     true
-}
-
-async fn decode_tags(inp: PathBuf) -> tag_set::TagSet {
-    // TODO: impl
-    let mut ret = tag_set::TagSet::new();
-    ret
 }
 
 fn reload_music_files(
