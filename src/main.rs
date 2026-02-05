@@ -37,10 +37,9 @@ impl MioPlaysState {
 }
 
 impl Tracks {
-    fn clone_to_multi_vec(&self, items_per: usize) -> Vec<Vec<AlbumItem>> {
+    fn make_slint_vec(&self) -> Vec<AlbumItem> {
         let mut ret = vec![];
-        let mut chunk = vec![];
-        for (e, _x) in self.0.iter().enumerate() {
+        for (e, _album) in self.0.iter().enumerate() {
             let x = AlbumItem {
                 album: "ALBUM".into(),
                 artist: "ARTIST".into(),
@@ -48,10 +47,7 @@ impl Tracks {
                 title: "TITLE".into(),
                 album_art: Default::default(),
             };
-            chunk.push(x);
-            if chunk.len() >= items_per {
-                ret.push(std::mem::take(&mut chunk));
-            }
+            ret.push(x);
         }
         ret
     }
@@ -130,57 +126,17 @@ fn reload_music_files(
             state.tracks.scan().await;
             drop(state);
 
+            // then load the grid
             w_mainui
-                .upgrade_in_event_loop(|mainui| {
-                    // then reload the grid
-                    mainui
-                        .global::<MainBrowsingState>()
-                        .invoke_album_view_width_changed();
+                .upgrade_in_event_loop(move |mainui| {
+                    let state = state_lock.read_blocking();
+                    let ret = state.tracks.make_slint_vec();
+                    let ret = slint::ModelRc::new(slint::VecModel::from(ret));
+                    mainui.global::<MainBrowsingState>().set_tracks(ret);
                 })
                 .unwrap();
         })
         .detach();
-}
-
-// NOTE: the UI can stall on this function, shove it to another thread (if needed)
-fn width_changed(
-    w_state: ArcWeak<smol::lock::RwLock<MioPlaysState>>,
-    w_mainui: SlintWeak<MainWindow>,
-) {
-    let Some(state_lock) = w_state.upgrade() else {
-        return;
-    };
-    let Some(mainui) = w_mainui.upgrade() else {
-        return;
-    };
-    let main_browsing_state = mainui.global::<MainBrowsingState>();
-
-    // check if row_count is still the same as the requested max-per-row
-    let vec_tracks = main_browsing_state.get_tracks();
-    let Some(inner) = vec_tracks.iter().nth(0) else {
-        // fail on empty vec
-        return;
-    };
-    // there is a single case where this will always result in a refresh:
-    // where the total songs is less than the max-per-row.
-    // anyways, fast path.
-    if inner.row_count() == main_browsing_state.get_max_per_row() as usize {
-        return;
-    }
-
-    // construct the multidim vec
-    let state = state_lock.read_blocking();
-    let multi_vec = state
-        .tracks
-        .clone_to_multi_vec(main_browsing_state.get_max_per_row() as usize);
-
-    // then set the track vec
-    main_browsing_state.set_tracks(slint::ModelRc::new(slint::VecModel::from(
-        multi_vec
-            .into_iter()
-            .map(|inner| slint::ModelRc::new(slint::VecModel::from(inner)))
-            .collect::<Vec<_>>(),
-    )));
 }
 
 fn main() {
@@ -192,12 +148,6 @@ fn main() {
         let w_state = Arc::downgrade(&state);
         let w_mainui = mainui.as_weak();
         move || reload_music_files(w_state.clone(), w_mainui.clone())
-    });
-
-    browse_state.on_album_view_width_changed({
-        let w_state = Arc::downgrade(&state);
-        let w_mainui = mainui.as_weak();
-        move || width_changed(w_state.clone(), w_mainui.clone())
     });
 
     drop(browse_state);

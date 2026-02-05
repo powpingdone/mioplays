@@ -8,9 +8,8 @@ export struct AlbumItem {
 
 export global MainBrowsingState {
     // the list of albums/tracks in the folder
-    in property <[[AlbumItem]]> tracks;
+    in property <[AlbumItem]> tracks;
     in property <int> max-per-row;
-    callback album-view-width-changed();
     callback begin-reload-all-tracks();
 }
 

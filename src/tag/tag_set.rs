@@ -61,121 +61,64 @@ macro_rules! tag_trait_impl {
 
 // Titles/Subtitles
 tag_impl!(AlbumTitle {inner: String, sort_order: String} => "Album Title");
-tag_impl!(SetSubtitle as String => "Album Subtitle");
-tag_impl!(TrackTitle as String => "Track Title");
-tag_impl!(TrackSubtitle as String => "Track Subtitle");
-tag_impl!(OriginalAlbumTitle as String => "Original Album Title");
+tag_impl!(TrackTitle {inner: String, sort_order: String} => "Track Title");
+tag_impl!(DiscTitle as String => "Disc Title"); // title of individual disk
 
-// Artists
-tag_impl!(OriginalArtist as Vec<String> => "Original Artist");
-tag_impl!(OriginalLyricist as Vec<String> => "Original Lyricist");
-tag_impl!(AlbumArtist {inner: Vec<String>, sort_order: String} => "Album Artist");
+// Creators (Artists) & Credits
+tag_impl!(AlbumArtist {inner: Vec<String>, sort_order: Vec<String>} => "Album Artist");
+tag_impl!(TrackArtist {inner: Vec<String>, sort_order: Vec<String>} => "Track Artist");
+tag_impl!(Composer {inner: String, sort_order: String} => "Composer");
+tag_impl!(Performer as Vec<String> => "Performer");
+tag_impl!(Remixer as Vec<String> => "Remixer");
 
-// Other
-tag_impl!(ShowName as String => "Show Name"); // The name of a TV show
-tag_impl!(ContentGroup as String => "Content Group");
-
-// Sort Order
-tag_impl!(TrackTitleSortOrder as String => "Track Title Sort Order");
-tag_impl!(TrackArtistSortOrder as String => "Track Artist Sort Order");
-tag_impl!(ShowNameSortOrder as String => "Show Name Sort Order");
-tag_impl!(ComposerSortOrder as String => "Composer Sort Order");
-
-//TrackArtist
-//TrackArtists
-//Arranger
-//Writer
-//Composer
-//Conductor
-//Director
-//Engineer
-//Lyricist
-//MixDj
-//MixEngineer
-//MusicianCredits
-//Performer
-//Producer
-//Publisher
-//Label
-//InternetRadioStationName
-//InternetRadioStationOwner
-//Remixer
-//DiscNumber
-//DiscTotal
-//TrackNumber
-//TrackTotal
-//Popularimeter
-//ParentalAdvisory
-//Isrc
-//Barcode
-//CatalogNumber
-//Work
-//Movement
-//MovementNumber
-//MovementTotal
-//OriginalFileName
-//OriginalMediaType
-//EncodedBy
-//EncoderSoftware
-//EncoderSettings
-//EncodingTime
+// Music information
 //ReplayGainAlbumGain
 //ReplayGainAlbumPeak
 //ReplayGainTrackGain
 //ReplayGainTrackPeak
-//AudioFileUrl
-//AudioSourceUrl
-//CommercialInformationUrl
-//CopyrightUrl
-//TrackArtistUrl
-//RadioStationUrl
-//PaymentUrl
-//PublisherUrl
 //Genre
 //InitialKey
 //Color
 //Mood
 //Bpm
 //IntegerBpm
-//CopyrightMessage
-//License
-//PodcastDescription
-//PodcastSeriesCategory
-//PodcastUrl
-//PodcastGlobalUniqueId
-//PodcastKeywords
+
+// Other
+tag_impl!(DiscPos as u32 => "Disk Number");
+tag_impl!(DiscTotal as u32 => "Number of Disks");
+tag_impl!(TrackPos as u32 => "Track Number");
+tag_impl!(TrackTotal as u32 => "Number of Tracks");
+tag_impl!(ReleaseDate as jiff::Timestamp => "Release Date");
+
 //Comment
 //Description
 //Language
 //Script
 //Lyrics
-//AppleXid
-//AppleId3v2ContentGroup
-
-// Musicbrainz Tags
-//RecordingDate
-//Year
-//ReleaseDate
-//OriginalReleaseDate
-//MusicBrainzRecordingId
-//MusicBrainzTrackId
-//MusicBrainzReleaseId
-//MusicBrainzReleaseGroupId
-//MusicBrainzArtistId
-//MusicBrainzReleaseArtistId
-//MusicBrainzWorkId
-//FlagCompilation
-//FlagPodcast
-//FileType
-//FileOwner
-//TaggingTime
-//Length
 
 // Special tag for the string insert
 #[derive(Debug)]
 pub struct UnknownItem(Box<dyn Any + Send + Sync + 'static>);
 impl private::Sealed for UnknownItem {}
 impl Tag for UnknownItem {
+    fn to_any(&self) -> &(dyn Any + 'static) {
+        self
+    }
+
+    fn to_any_boxed(self: Box<Self>) -> Box<dyn Any + 'static> {
+        self
+    }
+
+    fn display_name(&self) -> Option<&str> {
+        None
+    }
+}
+
+// Special tag for the Cover Art
+#[derive(Debug)]
+pub struct EncodedCoverArt(Box<[u8]>);
+impl private::Sealed for EncodedCoverArt {}
+impl Tag for EncodedCoverArt {
     fn to_any(&self) -> &(dyn Any + 'static) {
         self
     }

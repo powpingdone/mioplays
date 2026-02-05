@@ -19,61 +19,68 @@ global NavBind {
 
 component AlbumView inherits ScrollView {
     private property <length> card-size: 192px;
-    changed width => {
-        // on width update, also update the internal representation
-        MainBrowsingState.max-per-row = self.width / card-size;
-        MainBrowsingState.album-view-width-changed()
+    private property <int> max-per-row: self.width / card-size;
+
+    init => {
+        MainBrowsingState.begin-reload-all-tracks();
     }
 
-    Vertical {
-        for row[i] in MainBrowsingState.tracks: Horizontal {
-            for album[j] in row: FilledCard {
+    changed width => {
+        // on width update, also update the internal representation
+        max-per-row = self.width / card-size;
+    }
+
+    GridLayout {
+        for album[i] in MainBrowsingState.tracks: FilledCard {
                 // square, with text afterward
                 width: card-size;
-                max-height: self.width + 36px;
+            max-height: self.width + 36px;
 
-                // playing interaction
-                clickable: true;
-                clicked => {
-                    // TODO: add playing interaction
+            // determine row/col
+                col: i.mod(max-per-row);
+            row: i / max-per-row;
+
+            // playing interaction
+                    clickable: true;
+            clicked => {
+                        // TODO: add playing interaction
+                    }
+
+                    // album into
+                    Vertical {
+                alignment: start;
+
+                Image {
+                    source: album.album-art;
+                    width: 100%;
                 }
 
-                // album into
-                Vertical {
+                Horizontal {
                     alignment: start;
+                    padding: 0px;
 
-                    Image {
-                        source: album.album-art;
-                        width: 100%;
+                    Text {
+                        text: album.title;
                     }
+                }
 
-                    Horizontal {
-                        alignment: start;
-                        padding: 0px;
+                Horizontal {
+                    alignment: start;
+                    padding: 0px;
 
-                        Text {
-                            text: album.title;
-                        }
+                    Text {
+                        text: album.artist;
+                        font-size: 8px;
                     }
+                }
 
-                    Horizontal {
-                        alignment: start;
-                        padding: 0px;
+                Horizontal {
+                    alignment: start;
+                    padding: 0px;
 
-                        Text {
-                            text: album.artist;
-                            font-size: 8px;
-                        }
-                    }
-
-                    Horizontal {
-                        alignment: start;
-                        padding: 0px;
-
-                        Text {
-                            text: album.album;
-                            font-size: 8px;
-                        }
+                    Text {
+                        text: album.album;
+                        font-size: 8px;
                     }
                 }
             }

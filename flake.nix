@@ -46,6 +46,7 @@
                 wayland-protocols
                 wayland
                 fontconfig
+                pkg-config
               ]);
             buildInputs = packages;
             LD_LIBRARY_PATH = libPath;
