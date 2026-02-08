@@ -39,15 +39,70 @@ impl MioPlaysState {
 impl Tracks {
     fn make_slint_vec(&self) -> Vec<AlbumItem> {
         let mut ret = vec![];
-        for (e, _album) in self.0.iter().enumerate() {
-            let x = AlbumItem {
-                album: "ALBUM".into(),
-                artist: "ARTIST".into(),
-                id: e.try_into().unwrap(),
-                title: "TITLE".into(),
-                album_art: Default::default(),
-            };
-            ret.push(x);
+        for (id, file) in self.0.iter().enumerate() {
+            let id = id.try_into().unwrap();
+            ret.push(if let Some(tags) = &file.tags {
+                let album = slint::SharedString::from(
+                    tags.get_typed_tag::<tag::AlbumTitle>()
+                        .and_then(|x| x.inner.clone())
+                        .unwrap_or_default(),
+                );
+                let artist = slint::SharedString::from(
+                    tags.get_typed_tag::<tag::AlbumArtist>()
+                        .map(|x| x.inner.clone().join("; "))
+                        .unwrap_or_default(),
+                );
+                let title = slint::SharedString::from(
+                    tags.get_typed_tag::<tag::AlbumTitle>()
+                        .and_then(|x| x.inner.clone())
+                        .unwrap_or_else(|| {
+                            file.path
+                                .file_name()
+                                .unwrap_or_default()
+                                .to_string_lossy()
+                                .into_owned()
+                                .into()
+                        }),
+                );
+                // TODO: this means that the image decoding is done on the main thread
+                // this *will* lead to a performance issue if, for example, there are a lot of images
+                // or the image itself is malicious
+                let album_art = if let Some(img) = tags.get_typed_tag::<tag::EncodedCoverArt>()
+                    && let Some(img) = image::load_from_memory(&img.0).ok()
+                    && let Some(rgba8) = img.as_rgba8()
+                {
+                    slint::Image::from_rgba8(slint::SharedPixelBuffer::clone_from_slice(
+                        rgba8,
+                        rgba8.width(),
+                        rgba8.height(),
+                    ))
+                } else {
+                    slint::Image::default()
+                };
+
+                AlbumItem {
+                    album,
+                    album_art,
+                    artist,
+                    id,
+                    title,
+                }
+            } else {
+                // no tags found, just show fname
+                AlbumItem {
+                    album: "".into(),
+                    album_art: slint::Image::default(),
+                    artist: "".into(),
+                    id,
+                    title: file
+                        .path
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .into_owned()
+                        .into(),
+                }
+            });
         }
         ret
     }
@@ -102,8 +157,7 @@ impl Tracks {
 }
 
 async fn check_extension_for_tag_decoder(inp: &str) -> bool {
-    // TODO: impl
-    true
+    lofty::file::FileType::from_ext(inp).is_some()
 }
 
 async fn check_extension_for_sound_decoder(inp: &str) -> bool {

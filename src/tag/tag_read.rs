@@ -49,7 +49,10 @@ macro_rules! set_string {
                     //
                     // this is weird syntax for what I want, but tldr
                     // I can't just $map.push_typed_tag($key { inner });
-                    // so I manually specify from the default, then modify it.
+                    // so I manually specify the type from the default, modify it,
+                    // then push it back to the map
+                    //
+                    // the other macros use this pattern
                     let mut inp: $key = Default::default();
                     inp.$field = Some(value);
                     drop($map.push_typed_tag(inp));
@@ -85,7 +88,7 @@ macro_rules! set_parsed {
             // check if key exists
             let check_key = $map.drop_typed_tag::<$key>();
             if check_key.is_none()
-                // check if string is parseable and that it exists
+                // check if string exists and is parseable
                 && let Some(text) = $value.text()
                 && let Ok(parsed) = text.parse()
             {
@@ -127,7 +130,6 @@ fn tag_probe_worker_thread(inp: PathBuf, tx: oneshot::Sender<tag_set::TagSet>) {
             // TODO: possibly use item.lang()
             let (key, value) = (item.key(), item.value());
             match key {
-                // typed items
                 ItemKey::AlbumTitle => set_string!(map, tag::AlbumTitle { value: inner }),
                 ItemKey::AlbumTitleSortOrder => {
                     set_string!(map, tag::AlbumTitle { value: sort_order })
