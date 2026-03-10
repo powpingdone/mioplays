@@ -110,6 +110,7 @@ impl Tracks {
     async fn scan(&mut self) {
         // TODO: error handling
         async fn scan_recurse(at: PathBuf, limit: u8) -> Vec<Item> {
+            dbg!(&at);
             if limit > 0 {
                 // normal scan logic
                 let mut ret = vec![];
@@ -169,10 +170,10 @@ fn reload_music_files(
     w_state: ArcWeak<smol::lock::RwLock<MioPlaysState>>,
     w_mainui: SlintWeak<MainWindow>,
 ) {
-    // spawn an async task
     let Some(state_lock) = w_state.upgrade() else {
         return;
     };
+    // spawn an async task
     ASYNC_RT
         .spawn(async move {
             // reset track list

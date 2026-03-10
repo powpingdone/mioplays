@@ -9,6 +9,7 @@ import {
     Grid,
     FilledCard,
     Horizontal,
+    FilledButton,
 } from "material/material.slint";
 import { Palette, AboutSlint } from "std-widgets.slint";
 
@@ -28,6 +29,11 @@ component AlbumView inherits ScrollView {
     changed width => {
         // on width update, also update the internal representation
         max-per-row = self.width / card-size;
+    }
+
+    FilledButton {
+        text: "reload";
+        clicked => {MainBrowsingState.begin-reload-all-tracks()}
     }
 
     GridLayout {
